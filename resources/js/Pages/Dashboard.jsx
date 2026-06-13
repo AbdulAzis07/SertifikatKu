@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import StatCard from '@/Components/UI/StatCard';
 import { Head, Link } from '@inertiajs/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState, useEffect } from 'react';
 
 // ── Dummy Data ──────────────────────────────────────────────
 const chartData = [
@@ -62,16 +63,26 @@ const CustomTooltip = ({ active, payload, label }) => {
 const StatusBadge = ({ status }) => {
     const styles = {
         valid: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',
+        dicabut: 'bg-red-400/10 text-red-400 border-red-400/20',
         revoked: 'bg-red-400/10 text-red-400 border-red-400/20',
     };
+    const activeStyle = styles[status] || styles.valid;
+    const displayText = status === 'valid' ? 'Valid' : (status === 'dicabut' ? 'Dicabut' : 'Revoked');
+    const symbol = status === 'valid' ? '✓ ' : '✕ ';
+
     return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status]}`}>
-            {status === 'valid' ? '✓ ' : '✕ '}{status.charAt(0).toUpperCase() + status.slice(1)}
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${activeStyle}`}>
+            {symbol}{displayText}
         </span>
     );
 };
 
-export default function Dashboard({ stats, chart_data, recent_certificates }) {
+export default function Dashboard({ stats = {}, chart_data = [], recent_certificates = [] }) {
+    const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     return (
         <AuthenticatedLayout>
             <Head title="Dashboard" />
@@ -86,7 +97,7 @@ export default function Dashboard({ stats, chart_data, recent_certificates }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
                 <StatCard
                     title="Total Events"
-                    value={stats.total_events}
+                    value={stats?.total_events ?? 0}
                     change="All time events"
                     changeType="increase"
                     color="indigo"
@@ -98,7 +109,7 @@ export default function Dashboard({ stats, chart_data, recent_certificates }) {
                 />
                 <StatCard
                     title="Total Participants"
-                    value={stats.total_participants}
+                    value={stats?.total_participants ?? 0}
                     change="Registered participants"
                     changeType="increase"
                     color="cyan"
@@ -110,7 +121,7 @@ export default function Dashboard({ stats, chart_data, recent_certificates }) {
                 />
                 <StatCard
                     title="Total Certificates"
-                    value={stats.total_certificates}
+                    value={stats?.total_certificates ?? 0}
                     change="Generated certificates"
                     changeType="increase"
                     color="emerald"
@@ -122,8 +133,8 @@ export default function Dashboard({ stats, chart_data, recent_certificates }) {
                 />
                 <StatCard
                     title="Valid Certificates"
-                    value={stats.valid_certificates}
-                    change={`${stats.valid_rate}% valid rate`}
+                    value={stats?.valid_certificates ?? 0}
+                    change={`${stats?.valid_rate ?? 100}% valid rate`}
                     changeType="increase"
                     color="amber"
                     icon={
@@ -147,21 +158,27 @@ export default function Dashboard({ stats, chart_data, recent_certificates }) {
                             Live Database Data
                         </div>
                     </div>
-                    <ResponsiveContainer width="100%" height={280}>
-                        <BarChart data={chart_data} barSize={24}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
-                            <Bar dataKey="certificates" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
-                            <defs>
-                                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#818cf8" />
-                                    <stop offset="100%" stopColor="#6366f1" />
-                                </linearGradient>
-                            </defs>
-                        </BarChart>
-                    </ResponsiveContainer>
+                    {isMounted ? (
+                        <ResponsiveContainer width="100%" height={280}>
+                            <BarChart data={chart_data} barSize={24}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
+                                <Bar dataKey="certificates" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
+                                <defs>
+                                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#818cf8" />
+                                        <stop offset="100%" stopColor="#6366f1" />
+                                    </linearGradient>
+                                </defs>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-[280px] w-full flex items-center justify-center text-slate-500 text-xs bg-slate-900/10 rounded-xl">
+                            Loading chart...
+                        </div>
+                    )}
                 </div>
 
                 {/* Quick Actions */}
