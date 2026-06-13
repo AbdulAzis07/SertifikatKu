@@ -3,7 +3,7 @@ import DetailModal from '@/Components/UI/DetailModal';
 import FormModal from '@/Components/UI/FormModal';
 import ConfirmModal from '@/Components/UI/ConfirmModal';
 import FileUpload from '@/Components/UI/FileUpload';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 const dummyTemplates = [
@@ -54,29 +54,62 @@ const OrientationBadge = ({ orientation }) => (
     </span>
 );
 
-export default function TemplatesIndex() {
+export default function TemplatesIndex({ templates }) {
     const [viewTemplate, setViewTemplate] = useState(null);
     const [editTemplate, setEditTemplate] = useState(null);
     const [deleteTemplate, setDeleteTemplate] = useState(null);
-    const [editSigners, setEditSigners] = useState([]);
+
+    const { data, setData, put, reset } = useForm({
+        nama: '',
+        orientasi: 'landscape',
+        deskripsi_format: '',
+        signers: [],
+    });
 
     const openEdit = (tpl) => {
         setEditTemplate(tpl);
-        setEditSigners([...tpl.signers]);
+        setData({
+            nama: tpl.name || '',
+            orientasi: tpl.orientation || 'landscape',
+            deskripsi_format: tpl.description || '',
+            signers: tpl.signers.map(s => ({ nama: s.name, jabatan: s.title })),
+        });
     };
 
     const addEditSigner = () => {
-        if (editSigners.length < 4) setEditSigners([...editSigners, { name: '', title: '' }]);
+        if (data.signers.length < 4) {
+            setData('signers', [...data.signers, { nama: '', jabatan: '' }]);
+        }
     };
 
     const removeEditSigner = (idx) => {
-        if (editSigners.length > 1) setEditSigners(editSigners.filter((_, i) => i !== idx));
+        if (data.signers.length > 1) {
+            setData('signers', data.signers.filter((_, i) => i !== idx));
+        }
     };
 
     const handleEditSignerChange = (idx, field, value) => {
-        const updated = [...editSigners];
-        updated[idx][field] = value;
-        setEditSigners(updated);
+        const updated = [...data.signers];
+        updated[idx][field === 'name' ? 'nama' : 'jabatan'] = value;
+        setData('signers', updated);
+    };
+
+    const handleEdit = (e) => {
+        e.preventDefault();
+        put(route('templates.update', editTemplate.id), {
+            onSuccess: () => {
+                setEditTemplate(null);
+                reset();
+            }
+        });
+    };
+
+    const handleDelete = () => {
+        router.delete(route('templates.destroy', deleteTemplate.id), {
+            onSuccess: () => {
+                setDeleteTemplate(null);
+            }
+        });
     };
 
     return (
@@ -96,7 +129,7 @@ export default function TemplatesIndex() {
 
             {/* Grid Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-                {dummyTemplates.map((tpl) => (
+                {templates.map((tpl) => (
                     <div key={tpl.id} className="group rounded-2xl bg-slate-800/80 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-white/20 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300">
                         {/* Thumbnail */}
                         <div className={`relative h-40 bg-gradient-to-br ${tpl.color} flex items-center justify-center`}>
@@ -185,30 +218,57 @@ export default function TemplatesIndex() {
             </DetailModal>
 
             {/* Edit Modal */}
-            <FormModal show={!!editTemplate} onClose={() => { setEditTemplate(null); setEditSigners([]); }} onSubmit={() => { setEditTemplate(null); setEditSigners([]); }} title="Edit Template" submitText="Save Changes">
+            <FormModal show={!!editTemplate} onClose={() => { setEditTemplate(null); reset(); }} onSubmit={handleEdit} title="Edit Template" submitText="Save Changes">
                 {editTemplate && (
                     <>
-                        <div><label className="block text-sm font-medium text-slate-300 mb-1.5">Template Name</label><input type="text" defaultValue={editTemplate.name} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" /></div>
-                        <div><label className="block text-sm font-medium text-slate-300 mb-1.5">Orientation</label><select defaultValue={editTemplate.orientation} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></div>
-                        <div><label className="block text-sm font-medium text-slate-300 mb-1.5">Description</label><textarea defaultValue={editTemplate.description} rows={3} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" /></div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Template Name</label>
+                            <input
+                                type="text"
+                                value={data.nama}
+                                onChange={(e) => setData('nama', e.target.value)}
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Orientation</label>
+                            <select
+                                value={data.orientasi}
+                                onChange={(e) => setData('orientasi', e.target.value)}
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            >
+                                <option value="landscape">Landscape</option>
+                                <option value="portrait">Portrait</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Description</label>
+                            <textarea
+                                value={data.deskripsi_format}
+                                onChange={(e) => setData('deskripsi_format', e.target.value)}
+                                rows={3}
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                        </div>
 
                         {/* Dynamic Signers in Edit */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-slate-300">Signers ({editSigners.length})</label>
-                                {editSigners.length < 4 && (
+                                <label className="block text-sm font-medium text-slate-300">Signers ({data.signers.length})</label>
+                                {data.signers.length < 4 && (
                                     <button type="button" onClick={addEditSigner} className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">+ Add Signer</button>
                                 )}
                             </div>
                             <div className="space-y-2">
-                                {editSigners.map((s, i) => (
+                                {data.signers.map((s, i) => (
                                     <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-slate-700/30 border border-white/5">
                                         <span className="flex items-center justify-center w-5 h-5 rounded bg-indigo-500/20 text-indigo-400 text-[10px] font-bold mt-1.5">{i + 1}</span>
                                         <div className="flex-1 grid grid-cols-2 gap-2">
-                                            <input type="text" value={s.name} onChange={(e) => handleEditSignerChange(i, 'name', e.target.value)} placeholder="Nama" className="rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-                                            <input type="text" value={s.title} onChange={(e) => handleEditSignerChange(i, 'title', e.target.value)} placeholder="Jabatan" className="rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                                            <input type="text" value={s.nama} onChange={(e) => handleEditSignerChange(i, 'name', e.target.value)} placeholder="Nama" className="rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required />
+                                            <input type="text" value={s.jabatan} onChange={(e) => handleEditSignerChange(i, 'title', e.target.value)} placeholder="Jabatan" className="rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required />
                                         </div>
-                                        {editSigners.length > 1 && (
+                                        {data.signers.length > 1 && (
                                             <button type="button" onClick={() => removeEditSigner(i)} className="p-1 rounded text-slate-500 hover:text-red-400 transition-colors mt-1.5">
                                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                             </button>
@@ -222,7 +282,7 @@ export default function TemplatesIndex() {
             </FormModal>
 
             {/* Delete Modal */}
-            <ConfirmModal show={!!deleteTemplate} onClose={() => setDeleteTemplate(null)} onConfirm={() => setDeleteTemplate(null)} title="Delete Template" message={deleteTemplate ? `Are you sure you want to delete "${deleteTemplate.name}"? Events using this template will be unlinked.` : ''} confirmText="Delete Template" />
+            <ConfirmModal show={!!deleteTemplate} onClose={() => setDeleteTemplate(null)} onConfirm={handleDelete} title="Delete Template" message={deleteTemplate ? `Are you sure you want to delete "${deleteTemplate.name}"? Events using this template will be unlinked.` : ''} confirmText="Delete Template" />
         </AuthenticatedLayout>
     );
 }

@@ -71,7 +71,7 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-export default function Dashboard() {
+export default function Dashboard({ stats, chart_data, recent_certificates }) {
     return (
         <AuthenticatedLayout>
             <Head title="Dashboard" />
@@ -86,8 +86,8 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
                 <StatCard
                     title="Total Events"
-                    value="24"
-                    change="+3 this month"
+                    value={stats.total_events}
+                    change="All time events"
                     changeType="increase"
                     color="indigo"
                     icon={
@@ -98,8 +98,8 @@ export default function Dashboard() {
                 />
                 <StatCard
                     title="Total Participants"
-                    value="1,248"
-                    change="+156 this month"
+                    value={stats.total_participants}
+                    change="Registered participants"
                     changeType="increase"
                     color="cyan"
                     icon={
@@ -110,8 +110,8 @@ export default function Dashboard() {
                 />
                 <StatCard
                     title="Total Certificates"
-                    value="1,036"
-                    change="+89 this month"
+                    value={stats.total_certificates}
+                    change="Generated certificates"
                     changeType="increase"
                     color="emerald"
                     icon={
@@ -122,8 +122,8 @@ export default function Dashboard() {
                 />
                 <StatCard
                     title="Valid Certificates"
-                    value="1,012"
-                    change="97.7% valid rate"
+                    value={stats.valid_certificates}
+                    change={`${stats.valid_rate}% valid rate`}
                     changeType="increase"
                     color="amber"
                     icon={
@@ -144,11 +144,11 @@ export default function Dashboard() {
                             <p className="text-sm text-slate-400">Monthly overview for 2026</p>
                         </div>
                         <div className="px-3 py-1.5 rounded-lg bg-emerald-400/10 text-emerald-400 text-sm font-medium border border-emerald-400/20">
-                            +12.5% vs last year
+                            Live Database Data
                         </div>
                     </div>
                     <ResponsiveContainer width="100%" height={280}>
-                        <BarChart data={chartData} barSize={24}>
+                        <BarChart data={chart_data} barSize={24}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
@@ -189,14 +189,14 @@ export default function Dashboard() {
 
                     {/* Summary Stats */}
                     <div className="mt-6 pt-4 border-t border-white/5">
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">This Month</p>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Overall System Summary</p>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="text-center p-3 rounded-xl bg-slate-700/30">
-                                <p className="text-xl font-bold text-white font-mono">3</p>
+                                <p className="text-xl font-bold text-white font-mono">{stats.total_events}</p>
                                 <p className="text-xs text-slate-400">Events</p>
                             </div>
                             <div className="text-center p-3 rounded-xl bg-slate-700/30">
-                                <p className="text-xl font-bold text-white font-mono">89</p>
+                                <p className="text-xl font-bold text-white font-mono">{stats.total_certificates}</p>
                                 <p className="text-xs text-slate-400">Certificates</p>
                             </div>
                         </div>
@@ -230,15 +230,23 @@ export default function Dashboard() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {recentCertificates.map((cert) => (
-                                <tr key={cert.id} className="hover:bg-white/[0.03] transition-colors">
-                                    <td className="px-6 py-4 text-sm font-mono text-indigo-400">{cert.number}</td>
-                                    <td className="px-6 py-4 text-sm text-slate-200 font-medium">{cert.name}</td>
-                                    <td className="px-6 py-4 text-sm text-slate-400">{cert.event}</td>
-                                    <td className="px-6 py-4 text-sm text-slate-400 font-mono">{cert.date}</td>
-                                    <td className="px-6 py-4"><StatusBadge status={cert.status} /></td>
+                            {recent_certificates.length > 0 ? (
+                                recent_certificates.map((cert) => (
+                                    <tr key={cert.id} className="hover:bg-white/[0.03] transition-colors">
+                                        <td className="px-6 py-4 text-sm font-mono text-indigo-400">{cert.number}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-200 font-medium">{cert.name}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-400">{cert.event}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-400 font-mono">{cert.date}</td>
+                                        <td className="px-6 py-4"><StatusBadge status={cert.status} /></td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-8 text-center text-sm text-slate-500">
+                                        No recent certificates generated yet.
+                                    </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>

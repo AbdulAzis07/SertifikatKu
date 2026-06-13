@@ -3,7 +3,7 @@ import DataTable from '@/Components/DataTable';
 import DetailModal from '@/Components/UI/DetailModal';
 import FormModal from '@/Components/UI/FormModal';
 import ConfirmModal from '@/Components/UI/ConfirmModal';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 // ── Dummy Data ──────────────────────────────────────────────
@@ -42,25 +42,55 @@ const columns = [
     { key: 'status', label: 'Status', render: (val) => <StatusBadge status={val} /> },
 ];
 
-export default function EventsIndex() {
-    const [events] = useState(dummyEvents);
+export default function EventsIndex({ events }) {
     const [viewEvent, setViewEvent] = useState(null);
     const [editEvent, setEditEvent] = useState(null);
     const [deleteEvent, setDeleteEvent] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all');
 
+    const { data, setData, put, delete: destroy, reset } = useForm({
+        nama: '',
+        penyelenggara: '',
+        lokasi: '',
+        tanggal_mulai: '',
+        tanggal_selesai: '',
+        deskripsi: '',
+        kategori: 'seminar',
+    });
+
     const filteredEvents = statusFilter === 'all'
         ? events
         : events.filter((e) => e.status === statusFilter);
 
+    const openEdit = (item) => {
+        setEditEvent(item);
+        setData({
+            nama: item.title || '',
+            penyelenggara: item.organizer || '',
+            lokasi: item.location || '',
+            tanggal_mulai: item.event_date || '',
+            tanggal_selesai: item.tanggal_selesai || item.event_date || '',
+            deskripsi: item.description || '',
+            kategori: item.kategori || 'seminar',
+        });
+    };
+
     const handleEdit = (e) => {
-        // UI only — no submission
-        setEditEvent(null);
+        e.preventDefault();
+        put(route('events.update', editEvent.id), {
+            onSuccess: () => {
+                setEditEvent(null);
+                reset();
+            }
+        });
     };
 
     const handleDelete = () => {
-        // UI only — no deletion
-        setDeleteEvent(null);
+        destroy(route('events.destroy', deleteEvent.id), {
+            onSuccess: () => {
+                setDeleteEvent(null);
+            }
+        });
     };
 
     return (
@@ -90,7 +120,7 @@ export default function EventsIndex() {
                 data={filteredEvents}
                 searchPlaceholder="Search events..."
                 onView={(item) => setViewEvent(item)}
-                onEdit={(item) => setEditEvent(item)}
+                onEdit={(item) => openEdit(item)}
                 onDelete={(item) => setDeleteEvent(item)}
                 filters={
                     <select
@@ -167,33 +197,74 @@ export default function EventsIndex() {
                     <>
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Title</label>
-                            <input type="text" defaultValue={editEvent.title} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                            <input
+                                type="text"
+                                value={data.nama}
+                                onChange={(e) => setData('nama', e.target.value)}
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                required
+                            />
+                            {errors.nama && <p className="text-red-400 text-xs mt-1">{errors.nama}</p>}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Description</label>
-                            <textarea defaultValue={editEvent.description} rows={3} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                            <textarea
+                                value={data.deskripsi}
+                                onChange={(e) => setData('deskripsi', e.target.value)}
+                                rows={3}
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                            {errors.deskripsi && <p className="text-red-400 text-xs mt-1">{errors.deskripsi}</p>}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Date</label>
-                                <input type="date" defaultValue={editEvent.event_date} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                                <input
+                                    type="date"
+                                    value={data.tanggal_mulai}
+                                    onChange={(e) => setData('tanggal_mulai', e.target.value)}
+                                    className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    required
+                                />
+                                {errors.tanggal_mulai && <p className="text-red-400 text-xs mt-1">{errors.tanggal_mulai}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Organizer / Penyelenggara</label>
-                                <input type="text" defaultValue={editEvent.organizer} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                                <input
+                                    type="text"
+                                    value={data.penyelenggara}
+                                    onChange={(e) => setData('penyelenggara', e.target.value)}
+                                    className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    required
+                                />
+                                {errors.penyelenggara && <p className="text-red-400 text-xs mt-1">{errors.penyelenggara}</p>}
                             </div>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Lokasi <span className="text-slate-500 text-xs font-normal">(opsional)</span></label>
-                            <input type="text" defaultValue={editEvent.location} placeholder="e.g. Gedung A, Universitas XYZ" className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white placeholder-slate-500 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                            <input
+                                type="text"
+                                value={data.lokasi}
+                                onChange={(e) => setData('lokasi', e.target.value)}
+                                placeholder="e.g. Gedung A, Universitas XYZ"
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white placeholder-slate-500 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                            {errors.lokasi && <p className="text-red-400 text-xs mt-1">{errors.lokasi}</p>}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Status</label>
-                            <select defaultValue={editEvent.status} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                <option value="draft">Draft</option>
-                                <option value="active">Active</option>
-                                <option value="completed">Completed</option>
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Kategori</label>
+                            <select
+                                value={data.kategori}
+                                onChange={(e) => setData('kategori', e.target.value)}
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            >
+                                <option value="seminar">Seminar</option>
+                                <option value="workshop">Workshop</option>
+                                <option value="pelatihan">Pelatihan</option>
+                                <option value="konferensi">Konferensi</option>
+                                <option value="lainnya">Lainnya</option>
                             </select>
+                            {errors.kategori && <p className="text-red-400 text-xs mt-1">{errors.kategori}</p>}
                         </div>
                     </>
                 )}

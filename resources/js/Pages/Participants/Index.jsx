@@ -3,26 +3,8 @@ import DataTable from '@/Components/DataTable';
 import DetailModal from '@/Components/UI/DetailModal';
 import FormModal from '@/Components/UI/FormModal';
 import ConfirmModal from '@/Components/UI/ConfirmModal';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
-
-const dummyParticipants = [
-    { id: 1, name: 'Ahmad Fauzi', email: 'ahmad.fauzi@email.com', phone: '081234567890', position: 'Peserta', award: 'Best Presenter', event: 'Workshop Docker Fundamentals', event_id: 1, certificate: 'CERT/WS-DOCKER/2026/001' },
-    { id: 2, name: 'Siti Nurhaliza', email: 'siti.nur@email.com', phone: '082345678901', position: 'Peserta', award: null, event: 'Workshop Docker Fundamentals', event_id: 1, certificate: 'CERT/WS-DOCKER/2026/002' },
-    { id: 3, name: 'Budi Santoso', email: 'budi.s@email.com', phone: '083456789012', position: 'Pemateri', award: null, event: 'Seminar AI', event_id: 2, certificate: 'CERT/SEM-AI/2026/015' },
-    { id: 4, name: 'Dewi Lestari', email: 'dewi.l@email.com', phone: '084567890123', position: 'Peserta', award: null, event: 'Webinar React & Next.js', event_id: 3, certificate: null },
-    { id: 5, name: 'Rudi Hermawan', email: 'rudi.h@email.com', phone: null, position: 'Moderator', award: null, event: 'Seminar AI', event_id: 2, certificate: 'CERT/SEM-AI/2026/016' },
-    { id: 6, name: 'Rina Wati', email: 'rina.w@email.com', phone: '086789012345', position: 'Peserta', award: 'Juara 1', event: 'Workshop Docker Fundamentals', event_id: 1, certificate: 'CERT/WS-DOCKER/2026/003' },
-    { id: 7, name: 'Agus Priyanto', email: 'agus.p@email.com', phone: '087890123456', position: 'Peserta', award: null, event: 'Training Cybersecurity', event_id: 4, certificate: null },
-    { id: 8, name: 'Maya Sari', email: 'maya.s@email.com', phone: '088901234567', position: 'Panitia', award: null, event: 'Workshop Docker Fundamentals', event_id: 1, certificate: 'CERT/WS-DOCKER/2026/004' },
-    { id: 9, name: 'Hendra Gunawan', email: 'hendra.g@email.com', phone: null, position: 'Peserta', award: 'Juara 2', event: 'Seminar AI', event_id: 2, certificate: 'CERT/SEM-AI/2026/017' },
-    { id: 10, name: 'Fitri Rahmawati', email: 'fitri.r@email.com', phone: '080123456789', position: 'Peserta', award: null, event: 'Webinar React & Next.js', event_id: 3, certificate: null },
-    { id: 11, name: 'Doni Pratama', email: 'doni.p@email.com', phone: '081111222333', position: 'Peserta', award: 'Best Project', event: 'Workshop Docker Fundamentals', event_id: 1, certificate: 'CERT/WS-DOCKER/2026/005' },
-    { id: 12, name: 'Lina Marlina', email: 'lina.m@email.com', phone: '082222333444', position: 'Peserta', award: null, event: 'Bootcamp Data Science', event_id: 7, certificate: 'CERT/BC-DS/2026/008' },
-];
-
-const positionOptions = ['Peserta', 'Pemateri', 'Moderator', 'Panitia', 'Pembicara', 'Instruktur', 'Mentor'];
-const events = ['All Events', 'Workshop Docker Fundamentals', 'Seminar AI', 'Webinar React & Next.js', 'Training Cybersecurity', 'Bootcamp Data Science'];
 
 const PositionBadge = ({ position }) => {
     const colors = {
@@ -30,9 +12,7 @@ const PositionBadge = ({ position }) => {
         Pemateri: 'bg-cyan-400/10 text-cyan-400 border-cyan-400/20',
         Moderator: 'bg-purple-400/10 text-purple-400 border-purple-400/20',
         Panitia: 'bg-amber-400/10 text-amber-400 border-amber-400/20',
-        Pembicara: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',
-        Instruktur: 'bg-rose-400/10 text-rose-400 border-rose-400/20',
-        Mentor: 'bg-teal-400/10 text-teal-400 border-teal-400/20',
+        Juri: 'bg-rose-400/10 text-rose-400 border-rose-400/20',
     };
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${colors[position] || 'bg-slate-400/10 text-slate-400 border-slate-400/20'}`}>{position}</span>;
 };
@@ -46,13 +26,52 @@ const columns = [
     { key: 'certificate', label: 'Sertifikat', render: (val) => val ? <span className="text-xs font-mono text-indigo-400">{val}</span> : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-400/10 text-slate-400 border border-slate-400/20">Pending</span> },
 ];
 
-export default function ParticipantsIndex() {
+export default function ParticipantsIndex({ participants, events }) {
     const [viewItem, setViewItem] = useState(null);
     const [editItem, setEditItem] = useState(null);
     const [deleteItem, setDeleteItem] = useState(null);
-    const [eventFilter, setEventFilter] = useState('All Events');
+    const [eventFilter, setEventFilter] = useState('all');
 
-    const filtered = eventFilter === 'All Events' ? dummyParticipants : dummyParticipants.filter((p) => p.event === eventFilter);
+    const { data, setData, put, delete: destroy, reset, errors } = useForm({
+        event_id: '',
+        nama: '',
+        email: '',
+        posisi: 'peserta',
+        penghargaan: '',
+    });
+
+    const openEdit = (item) => {
+        setEditItem(item);
+        setData({
+            event_id: item.event_id || '',
+            nama: item.name || '',
+            email: item.email || '',
+            posisi: item.position ? item.position.toLowerCase() : 'peserta',
+            penghargaan: item.award || '',
+        });
+    };
+
+    const handleEdit = (e) => {
+        e.preventDefault();
+        put(route('participants.update', editItem.id), {
+            onSuccess: () => {
+                setEditItem(null);
+                reset();
+            }
+        });
+    };
+
+    const handleDelete = () => {
+        destroy(route('participants.destroy', deleteItem.id), {
+            onSuccess: () => {
+                setDeleteItem(null);
+            }
+        });
+    };
+
+    const filtered = eventFilter === 'all'
+        ? participants
+        : participants.filter((p) => String(p.event_id) === String(eventFilter));
 
     return (
         <AuthenticatedLayout>
@@ -73,10 +92,11 @@ export default function ParticipantsIndex() {
 
             <DataTable
                 columns={columns} data={filtered} searchPlaceholder="Search participants..."
-                onView={(item) => setViewItem(item)} onEdit={(item) => setEditItem(item)} onDelete={(item) => setDeleteItem(item)}
+                onView={(item) => setViewItem(item)} onEdit={(item) => openEdit(item)} onDelete={(item) => setDeleteItem(item)}
                 filters={
                     <select value={eventFilter} onChange={(e) => setEventFilter(e.target.value)} className="rounded-lg bg-slate-700/50 border-white/10 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                        {events.map((e) => <option key={e} value={e}>{e}</option>)}
+                        <option value="all">All Events</option>
+                        {events.map((e) => <option key={e.id} value={String(e.id)}>{e.nama}</option>)}
                     </select>
                 }
             />
@@ -106,14 +126,10 @@ export default function ParticipantsIndex() {
                                 )}
                             </div>
                             <div>
-                                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Phone</p>
-                                <p className="text-white text-sm">{viewItem.phone || '—'}</p>
-                            </div>
-                            <div>
                                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Event</p>
                                 <p className="text-white text-sm">{viewItem.event}</p>
                             </div>
-                            <div className="col-span-2">
+                            <div>
                                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Certificate</p>
                                 {viewItem.certificate ? <p className="text-indigo-400 font-mono text-sm">{viewItem.certificate}</p> : <p className="text-slate-500 text-sm">Not generated yet</p>}
                             </div>
@@ -123,29 +139,78 @@ export default function ParticipantsIndex() {
             </DetailModal>
 
             {/* Edit Modal */}
-            <FormModal show={!!editItem} onClose={() => setEditItem(null)} onSubmit={() => setEditItem(null)} title="Edit Participant" submitText="Save Changes">
+            <FormModal show={!!editItem} onClose={() => setEditItem(null)} onSubmit={handleEdit} title="Edit Participant" submitText="Save Changes">
                 {editItem && (
                     <>
-                        <div><label className="block text-sm font-medium text-slate-300 mb-1.5">Nama</label><input type="text" defaultValue={editItem.name} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" /></div>
-                        <div><label className="block text-sm font-medium text-slate-300 mb-1.5">Email</label><input type="email" defaultValue={editItem.email} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" /></div>
-                        <div><label className="block text-sm font-medium text-slate-300 mb-1.5">Phone</label><input type="text" defaultValue={editItem.phone || ''} placeholder="Optional" className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white placeholder-slate-500 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" /></div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Nama</label>
+                            <input
+                                type="text"
+                                value={data.nama}
+                                onChange={(e) => setData('nama', e.target.value)}
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                required
+                            />
+                            {errors.nama && <p className="text-red-400 text-xs mt-1">{errors.nama}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
+                            <input
+                                type="email"
+                                value={data.email}
+                                onChange={(e) => setData('email', e.target.value)}
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                required
+                            />
+                            {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Event <span className="text-red-400">*</span></label>
+                            <select
+                                value={data.event_id}
+                                onChange={(e) => setData('event_id', e.target.value)}
+                                className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                required
+                            >
+                                <option value="">Select Event...</option>
+                                {events.map((e) => <option key={e.id} value={e.id}>{e.nama}</option>)}
+                            </select>
+                            {errors.event_id && <p className="text-red-400 text-xs mt-1">{errors.event_id}</p>}
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Sebagai / Posisi <span className="text-red-400">*</span></label>
-                                <select defaultValue={editItem.position} className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                    {positionOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+                                <select
+                                    value={data.posisi}
+                                    onChange={(e) => setData('posisi', e.target.value)}
+                                    className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    required
+                                >
+                                    <option value="peserta">Peserta</option>
+                                    <option value="pemateri">Pemateri</option>
+                                    <option value="moderator">Moderator</option>
+                                    <option value="panitia">Panitia</option>
+                                    <option value="juri">Juri</option>
                                 </select>
+                                {errors.posisi && <p className="text-red-400 text-xs mt-1">{errors.posisi}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Penghargaan <span className="text-slate-500 text-xs font-normal">(opsional)</span></label>
-                                <input type="text" defaultValue={editItem.award || ''} placeholder="e.g. Juara 1, Best Presenter" className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white placeholder-slate-500 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                                <input
+                                    type="text"
+                                    value={data.penghargaan}
+                                    onChange={(e) => setData('penghargaan', e.target.value)}
+                                    placeholder="e.g. Juara 1, Best Presenter"
+                                    className="w-full rounded-lg bg-slate-700/50 border-white/10 text-white placeholder-slate-500 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                />
+                                {errors.penghargaan && <p className="text-red-400 text-xs mt-1">{errors.penghargaan}</p>}
                             </div>
                         </div>
                     </>
                 )}
             </FormModal>
 
-            <ConfirmModal show={!!deleteItem} onClose={() => setDeleteItem(null)} onConfirm={() => setDeleteItem(null)} title="Delete Participant" message={deleteItem ? `Are you sure you want to delete "${deleteItem.name}"? Their certificate will also be removed.` : ''} confirmText="Delete" />
+            <ConfirmModal show={!!deleteItem} onClose={() => setDeleteItem(null)} onConfirm={handleDelete} title="Delete Participant" message={deleteItem ? `Are you sure you want to delete "${deleteItem.name}"? Their certificate will also be removed.` : ''} confirmText="Delete" />
         </AuthenticatedLayout>
     );
 }

@@ -1,9 +1,9 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function VerificationShow() {
-    const [certNumber, setCertNumber] = useState('');
-    const [result, setResult] = useState(null);
+export default function VerificationShow({ initialResult = null, code = '' }) {
+    const [certNumber, setCertNumber] = useState(code);
+    const [result, setResult] = useState(initialResult);
     const [isVerifying, setIsVerifying] = useState(false);
 
     const handleVerify = (e) => {
@@ -11,26 +11,39 @@ export default function VerificationShow() {
         setIsVerifying(true);
         setResult(null);
 
-        // Simulate network request
-        setTimeout(() => {
-            const num = certNumber.toUpperCase();
-            if (num.includes('REVOKE')) {
-                setResult({ status: 'revoked', number: num });
-            } else if (num.includes('CERT')) {
-                setResult({
-                    status: 'valid',
-                    name: 'Ahmad Fauzi',
-                    event: 'Workshop Docker Fundamentals',
-                    date: '2026-04-20',
-                    number: num,
-                    position: 'Peserta',
-                    award: null
-                });
-            } else {
-                setResult({ status: 'not_found', number: num });
+        const cleanCode = certNumber.trim();
+
+        fetch(`/verify/${encodeURIComponent(cleanCode)}`, {
+            headers: {
+                'Accept': 'application/json'
             }
-            setIsVerifying(false);
-        }, 800);
+        })
+            .then(res => {
+                if (res.status === 404) {
+                    return { status: 'not_found', number: cleanCode };
+                }
+                return res.json().then(data => {
+                    const status = data.status === 'dicabut' ? 'revoked' : data.status;
+                    return {
+                        status: status,
+                        number: data.certificate.nomor_sertifikat,
+                        name: data.certificate.participant.nama,
+                        event: data.certificate.event.nama,
+                        date: data.certificate.tanggal_terbit,
+                        position: data.certificate.participant.posisi,
+                        award: data.certificate.participant.penghargaan
+                    };
+                });
+            })
+            .then(resData => {
+                setResult(resData);
+                setIsVerifying(false);
+            })
+            .catch(err => {
+                console.error("Verification error:", err);
+                setResult({ status: 'not_found', number: cleanCode });
+                setIsVerifying(false);
+            });
     };
 
     return (
